@@ -1,0 +1,16 @@
+o o o o o o o o o o
+o o o o o o o o o o
+o o o o o o o o o o
+o o $ $ o o o o o o
+. 1 2 2 1 o o o o o 
+. . . . . . . . . .
+. . . . . . . . . .
+. . . . . . . . . .
+o o o o o o o o o o
+o o o o o o o o o o
+
+
+* - мина
+@ - флаг
+o - закрытая клетка
+. - открытая клетка
