@@ -180,7 +180,11 @@ public:
 		}		
 
 		if (field[x][y]->get_state() > 3) return true;
-		return false;
+		else
+		{
+			field[x][y]->set_state(3);
+			return false;
+		}
 	}
 
 	void calculate_numbers(int x, int y) 
