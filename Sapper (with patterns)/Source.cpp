@@ -2,9 +2,17 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <Windows.h>
 using namespace std;
 
 // Паттерны: посредник
+
+HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+
+void set_color(int text)
+{
+	SetConsoleTextAttribute(h, (0 << 4) + text);
+}
 
 class Dot
 {
@@ -41,6 +49,17 @@ public:
 	int get_color()
 	{
 		if (state <= 3) return 7;
+
+		int c = state - 3;
+
+		if (c == 1) return 9;
+		if (c == 2) return 2;
+		if (c == 3) return 4;
+		if (c == 4) return 1;
+		if (c == 5) return 13;
+		if (c == 6) return 3;
+		if (c == 7) return 8;
+		if (c == 8) return 15;
 	}
 
 	bool inRange(int value) { return value >= 0 && value <= 3; }
@@ -57,7 +76,9 @@ class Field
 	int w, h;
 
 	string str_pos[10][10];
+	string str_pos_rus[10][10];
 	string word[10] = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
+	string word_rus[10] = {"ф", "и", "с", "в", "у", "а", "п", "р", "ш", "о"};
 
 public:
 	Field()
@@ -77,18 +98,26 @@ public:
 			for (int j = 1; j <= 10; j++)
 			{
 				str_pos[j - 1][i - 1] = word[i-1] + to_string(j);
+				str_pos_rus[j - 1][i - 1] = word_rus[i-1] + to_string(j);
 			}
 		}
 	}
 
 	void show()
 	{
+		cout << "\ta b c d e f g h i j\n\n";
+
 		for (int i = 0; i < 10; i++)
 		{
+			cout << i + 1 << "\t";
 			for (int j = 0; j < 10; j++)
 			{
 				if (field[j][i]->get_state() <= 3) cout << field[j][i]->view_state() << " ";
-				else cout << to_string(field[j][i]->get_state()-3) << " ";
+
+				else
+				{
+					set_color(field[j][i]->get_color()); cout << to_string(field[j][i]->get_state() - 3); set_color(7); cout << " ";
+				}
 			}
 			cout << endl;
 		}
@@ -114,72 +143,125 @@ public:
 		}
 	}
 
-	void calculate_numbers(string index) 
+	void accept_input(string user)
 	{
-		if (!get_index(index))
+		if (get_index(user))
+		{
+			calculate_numbers(w, h);
+		}
+		else
 		{
 			cout << "Неверная координата!\n\n";
 			return;
 		}
+	}
 
-		if (field[w][h]->get_calc())
+	void calculate_numbers(int x, int y) 
+	{
+		if (y < 0) return;
+
+		if (field[x][h]->get_calc())
 		{
 			cout << "Вы уже вводили данную координату!\n\n";
 			return;
 		}
 
-		int w1, h1;
-
-		w1 = h1 = 1;
-
 		vector<int> made_empty;
 
 		// field[9][9].set_state(3); // [w][h]    [j][i]
 
-		if (field[w][h]->get_state() == 0)
+		if (field[x][y]->get_state() == 0)
 		{
 			cout << "Вы проиграли!\n";
 			return;
 		}
 
-		if (h + h1 < 10) 
+		if (y + 1 < 10) 
 		{ 
-			if (field[w][h + h1]->get_state() == 0) field[w][h]->nearby_mine(); 
-			if (w + w1 < 10) { if (field[w + w1][h + h1]->get_state() == 0) field[w][h]->nearby_mine(); }
-			if (w - w1 > -1) { if (field[w - w1][h + h1]->get_state() == 0) field[w][h]->nearby_mine(); }
+			if (field[x][y + 1]->get_state() == 0) field[x][y]->nearby_mine(); 
+			if (x + 1 < 10) { if (field[x + 1][y + 1]->get_state() == 0) field[x][y]->nearby_mine(); }
+			if (x - 1 > -1) { if (field[x - 1][y + 1]->get_state() == 0) field[x][y]->nearby_mine(); }
 		}
-		if (h - h1 > -1) 
+		if (y - 1 > -1) 
 		{
-			if (field[w][h - h1]->get_state() == 0) field[w][h]->nearby_mine();
-			if (w + w1 < 10) { if (field[w + w1][h - h1]->get_state() == 0) field[w][h]->nearby_mine(); }
-			if (w - w1 > -1) { if (field[w - w1][h - h1]->get_state() == 0) field[w][h]->nearby_mine(); }
+			if (field[x][y - 1]->get_state() == 0) field[x][y]->nearby_mine();
+			if (x + 1 < 10) { if (field[x + 1][y - 1]->get_state() == 0) field[x][y]->nearby_mine(); }
+			if (x - 1 > -1) { if (field[x - 1][y - 1]->get_state() == 0) field[x][y]->nearby_mine(); }
 		}
 
-		if (w + w1 < 10) { if (field[w + w1][h]->get_state() == 0) field[w][h]->nearby_mine(); }
-		if (w - w1 > -1) { if (field[w - w1][h]->get_state() == 0) field[w][h]->nearby_mine(); } 
+		if (x + 1 < 10) { if (field[x + 1][y]->get_state() == 0) field[x][y]->nearby_mine(); }
+		if (x - 1 > -1) { if (field[x - 1][y]->get_state() == 0) field[x][y]->nearby_mine(); } 
 
-		if (field[w][h]->get_state() == 2)
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------//
+
+		int state = field[x][y]->get_state();
+
+		if (state == 3 || state == 2)
 		{
-			field[w][h]->set_state(3);
-
-			if (h + h1 < 10)
-			{
-				if (field[w][h + h1]->get_state() == 2) field[w][h + h1]->set_state(3);
-				if (w + w1 < 10) { if (field[w + w1][h + h1]->get_state() == 2) field[w + w1][h + h1]->set_state(3); }
-				if (w - w1 > -1) { if (field[w - w1][h + h1]->get_state() == 2) field[w - w1][h + h1]->set_state(3); }
-			}
-			if (h - h1 > -1)
-			{
-				if(field[w][h - h1]->get_state() == 2) field[w][h - h1]->set_state(3);
-				if (w + w1 < 10) { if (field[w + w1][h - h1]->get_state() == 2) field[w + w1][h - h1]->set_state(3); }
-				if (w - w1 > -1) { if (field[w - w1][h - h1]->get_state() == 2) field[w - w1][h - h1]->set_state(3); }
-			}
-
-			if (w + w1 < 10) { if (field[w + w1][h]->get_state() == 2) field[w + w1][h]->set_state(3); }
-			if (w - w1 > -1) { if (field[w - w1][h]->get_state() == 2) field[w - w1][h]->set_state(3); }
+			if (y + 1 < 10) { calculate_numbers(x, y + 1); }
+			if (y - 1 > -1) { calculate_numbers(x, y - 1); }
 		}
 
-		field[w][h]->calculate();
+		//if (mode == 1 && field[x][y]->get_state() == 2 || field[x][y]->get_state() == 3)
+		//{
+		//	if (h + h1 < 10)
+		//	{
+		//		if (field[x][h + h1]->get_state() == 0) field[x][h]->nearby_mine();
+		//		if (x + w1 < 10) { if (field[x + w1][y + h1]->get_state() == 0) field[x][y]->nearby_mine(); }
+		//		if (x - w1 > -1) { if (field[x - w1][y + h1]->get_state() == 0) field[x][y]->nearby_mine(); }
+		//	}
+		//	if (h - h1 > -1)
+		//	{
+		//		if (field[w][h - h1]->get_state() == 0) field[w][h]->nearby_mine();
+		//		if (x + w1 < 10) { if (field[x + w1][y - h1]->get_state() == 0) field[x][y]->nearby_mine(); }
+		//		if (x - w1 > -1) { if (field[x - w1][y - h1]->get_state() == 0) field[x][y]->nearby_mine(); }
+		//	}
+
+		//	if (x + w1 < 10) { if (field[x + w1][y]->get_state() == 0) field[x][y]->nearby_mine(); }
+		//	if (x - w1 > -1) { if (field[x - w1][y]->get_state() == 0) field[x][y]->nearby_mine(); }
+
+		//	// if (field[x][y]->get_state() > 3) return;
+
+		//	field[x][y]->set_state(3);
+
+		//	if (y + h1 < 10)
+		//	{
+		//		if (field[x][y + h1]->get_state() == 2 || field[x][y + h1]->get_state() == 3) calculate_numbers(x, y + h1, 1);
+		//		if (x + w1 < 10) { if (field[x + w1][y + h1]->get_state() == 2 || field[x + w1][y + h1]->get_state() == 3) calculate_numbers(x + w1, y + h1, 1); }
+		//		if (x - w1 > -1) { if (field[x - w1][y + h1]->get_state() == 2 || field[x - w1][y + h1]->get_state() == 3) calculate_numbers(x - w1, y + h1, 1); }
+		//	}
+		//	if (h - h1 > -1)
+		//	{
+		//		if (field[x][h - h1]->get_state() == 2 || field[x][h - h1]->get_state() == 3) calculate_numbers(x, y - h1, 1);
+		//		if (w + w1 < 10) { if (field[x + w1][y - h1]->get_state() == 2 || field[x + w1][y - h1]->get_state() == 3) calculate_numbers(x + w1, y - h1, 1); }
+		//		if (w - w1 > -1) { if (field[x - w1][y - h1]->get_state() == 2 || field[x - w1][y - h1]->get_state() == 3) calculate_numbers(x - w1, y - h1, 1); }
+		//	}
+
+		//	if (x + w1 < 10) { if (field[x + w1][y]->get_state() == 2 || field[x + w1][y]->get_state() == 3) calculate_numbers(x + w1, y, 1); }
+		//	if (x - w1 > -1) { if (field[x - w1][y]->get_state() == 2 || field[x - w1][y]->get_state() == 3) calculate_numbers(x - w1, y, 1); }
+		//}
+		//else if(field[w][h]->get_state() == 2 || field[w][h]->get_state() == 3)
+		//{
+		//	field[w][h]->set_state(3);
+
+		//	if (h + h1 < 10)
+		//	{
+		//		if (field[w][h + h1]->get_state() == 2 || field[w][h + h1]->get_state() == 3) calculate_numbers(w, h + h1, 1);
+		//		if (w + w1 < 10) { if (field[w + w1][h + h1]->get_state() == 2 || field[w + w1][h + h1]->get_state() == 3) calculate_numbers(w + w1, h + h1, 1); }
+		//		if (w - w1 > -1) { if (field[w - w1][h + h1]->get_state() == 2 || field[w - w1][h + h1]->get_state() == 3) calculate_numbers(w - w1, h + h1, 1); }
+		//	}
+		//	if (h - h1 > -1)
+		//	{
+		//		if(field[w][h - h1]->get_state() == 2 || field[w][h - h1]->get_state() == 3) calculate_numbers(w, h - h1, 1);
+		//		if (w + w1 < 10) { if (field[w + w1][h - h1]->get_state() == 2 || field[w + w1][h - h1]->get_state() == 3) calculate_numbers(w + w1, h - h1, 1); }
+		//		if (w - w1 > -1) { if (field[w - w1][h - h1]->get_state() == 2 || field[w - w1][h - h1]->get_state() == 3) calculate_numbers(w - w1, h - h1, 1); }
+		//	}
+
+		//	if (w + w1 < 10) { if (field[w + w1][h]->get_state() == 2 || field[w + w1][h]->get_state() == 3) calculate_numbers(w + w1, h, 1); }
+		//	if (w - w1 > -1) { if (field[w - w1][h]->get_state() == 2 || field[w - w1][h]->get_state() == 3) calculate_numbers(w - w1, h, 1); }
+		//}
+
+		//field[w][h]->calculate();
 	}
 
 	bool get_index(string index)
@@ -188,7 +270,7 @@ public:
 		{
 			for (int j = 1; j <= 10; j++)
 			{
-				if (index == str_pos[j-1][i-1])
+				if (index == str_pos[j-1][i-1] || index == str_pos_rus[j-1][i-1])
 				{
 					w = i - 1;
 					h = j - 1;
@@ -202,7 +284,8 @@ public:
 
 int main()
 {
-	setlocale(LC_ALL, "ru");
+	system("chcp 1251");
+	system("cls");
 	string user;
 
 	Field field;
@@ -211,12 +294,12 @@ int main()
 	{
 		field.show();
 
-		cout << "Введите координату -> ";
+		cout << "\nВведите координату -> ";
 		cin >> user;
 		system("cls");
 
 		transform(user.begin(), user.end(), user.begin(), tolower);
-		
-		field.calculate_numbers(user);
+
+		field.accept_input(user);
 	}
 }
