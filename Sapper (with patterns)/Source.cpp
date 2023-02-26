@@ -75,6 +75,8 @@ class Field
 
 	int w, h;
 
+	vector<int> made_empty;
+
 	string str_pos[10][10];
 	string str_pos_rus[10][10];
 	string word[10] = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
@@ -156,6 +158,31 @@ public:
 		}
 	}
 
+	bool check_mines(int x, int y)
+	{
+		if (field[x][y]->get_state() <= 3)
+		{
+			if (y + 1 < 10)
+			{
+				if (field[x][y + 1]->get_state() == 0) field[x][y]->nearby_mine();
+				if (x + 1 < 10) { if (field[x + 1][y + 1]->get_state() == 0) field[x][y]->nearby_mine(); }
+				if (x - 1 > -1) { if (field[x - 1][y + 1]->get_state() == 0) field[x][y]->nearby_mine(); }
+			}
+			if (y - 1 > -1)
+			{
+				if (field[x][y - 1]->get_state() == 0) field[x][y]->nearby_mine();
+				if (x + 1 < 10) { if (field[x + 1][y - 1]->get_state() == 0) field[x][y]->nearby_mine(); }
+				if (x - 1 > -1) { if (field[x - 1][y - 1]->get_state() == 0) field[x][y]->nearby_mine(); }
+			}
+
+			if (x + 1 < 10) { if (field[x + 1][y]->get_state() == 0) field[x][y]->nearby_mine(); }
+			if (x - 1 > -1) { if (field[x - 1][y]->get_state() == 0) field[x][y]->nearby_mine(); }
+		}		
+
+		if (field[x][y]->get_state() > 3) return true;
+		return false;
+	}
+
 	void calculate_numbers(int x, int y) 
 	{
 		if (y < 0) return;
@@ -163,11 +190,9 @@ public:
 
 		if (field[x][h]->get_calc())
 		{
-			cout << "Вы уже вводили данную координату!\n\n";
+			//cout << "Вы уже вводили данную координату!\n\n";
 			return;
-		}
-
-		vector<int> made_empty;
+		}		
 
 		// field[9][9].set_state(3); // [w][h]    [j][i]
 
@@ -177,32 +202,45 @@ public:
 			return;
 		}
 
-		if (y + 1 < 10) 
-		{ 
-			if (field[x][y + 1]->get_state() == 0) field[x][y]->nearby_mine(); 
-			if (x + 1 < 10) { if (field[x + 1][y + 1]->get_state() == 0) field[x][y]->nearby_mine(); }
-			if (x - 1 > -1) { if (field[x - 1][y + 1]->get_state() == 0) field[x][y]->nearby_mine(); }
-		}
-		if (y - 1 > -1) 
-		{
-			if (field[x][y - 1]->get_state() == 0) field[x][y]->nearby_mine();
-			if (x + 1 < 10) { if (field[x + 1][y - 1]->get_state() == 0) field[x][y]->nearby_mine(); }
-			if (x - 1 > -1) { if (field[x - 1][y - 1]->get_state() == 0) field[x][y]->nearby_mine(); }
-		}
-
-		if (x + 1 < 10) { if (field[x + 1][y]->get_state() == 0) field[x][y]->nearby_mine(); }
-		if (x - 1 > -1) { if (field[x - 1][y]->get_state() == 0) field[x][y]->nearby_mine(); } 
+		check_mines(x, y);
 
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
 		int state = field[x][y]->get_state();
 
+		cout << "this x y is " << x << " " << y << endl;
+
+		cout << "field[x][y]->get_state() = " << field[x][y]->get_state() << endl;
+
 		if (state == 3 || state == 2)
 		{
-			cout << "y + 1 = " << y + 1 << " y - 1 = " << y - 1;
+			bool up, down, left, right;
+			up = down = left = right = true;
 
-			//if (y + 1 < 10) { calculate_numbers(x, y + 1); }
-			if (y - 1 > -1) { calculate_numbers(x, y - 1); }
+			for (int i = 0; i < 10; i++)
+			{
+				if (up && y - i > -1 && field[x][y - i]->get_state() != 0)
+				{
+					if (check_mines(x, y - i)) up = false;
+				}
+				if (down && y + i < 10 && field[x][y + i]->get_state() != 0) 
+				{
+					if(check_mines(x, y + i)) down = false;
+				}
+				
+				if (left && x - i > -1 && field[x - i][y]->get_state() != 0)
+				{
+					if (check_mines(x - i, y)) left = false;
+				}
+				if (right && x + i < 10 && field[x + i][y]->get_state() != 0)
+				{
+					if (check_mines(x + i, y)) right = false;
+				}				
+			}
+
+			////cout << "y + 1 = " << y + 1 << " y - 1 = " << y - 1;	
+			//if (y - 1 > -1) { check_mines(x, y - 1); /*calculate_numbers(x, y - 1);*/ }
+			//if (y + 1 < 10) { /*calculate_numbers(x, y + 1);*/ }					
 		}
 
 		// ДОДЕЛАТЬ
@@ -266,6 +304,7 @@ public:
 		//	if (w - w1 > -1) { if (field[w - w1][h]->get_state() == 2 || field[w - w1][h]->get_state() == 3) calculate_numbers(w - w1, h, 1); }
 		//}
 
+		made_empty.clear();
 		field[w][h]->calculate();
 	}
 
@@ -295,12 +334,14 @@ int main()
 
 	Field field;
 
+	cout << "Управление: Вы должны ввести координату, например A1 или J7, но не 1A или 7J\n\n";
+
 	while (true)
 	{
 		field.show();
 
 		cout << "\nВведите координату -> ";
-		cin >> user;
+ 		cin >> user;
 		system("cls");
 
 		transform(user.begin(), user.end(), user.begin(), tolower);
