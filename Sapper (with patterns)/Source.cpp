@@ -159,6 +159,7 @@ public:
 	void calculate_numbers(int x, int y) 
 	{
 		if (y < 0) return;
+		if (y > 9) return;
 
 		if (field[x][h]->get_calc())
 		{
@@ -198,9 +199,13 @@ public:
 
 		if (state == 3 || state == 2)
 		{
-			if (y + 1 < 10) { calculate_numbers(x, y + 1); }
+			cout << "y + 1 = " << y + 1 << " y - 1 = " << y - 1;
+
+			//if (y + 1 < 10) { calculate_numbers(x, y + 1); }
 			if (y - 1 > -1) { calculate_numbers(x, y - 1); }
 		}
+
+		// ДОДЕЛАТЬ
 
 		//if (mode == 1 && field[x][y]->get_state() == 2 || field[x][y]->get_state() == 3)
 		//{
@@ -261,7 +266,7 @@ public:
 		//	if (w - w1 > -1) { if (field[w - w1][h]->get_state() == 2 || field[w - w1][h]->get_state() == 3) calculate_numbers(w - w1, h, 1); }
 		//}
 
-		//field[w][h]->calculate();
+		field[w][h]->calculate();
 	}
 
 	bool get_index(string index)
