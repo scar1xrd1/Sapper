@@ -14,6 +14,11 @@ void set_color(int text)
 	SetConsoleTextAttribute(h, (0 << 4) + text);
 }
 
+void set_color(int text, int background)
+{
+	SetConsoleTextAttribute(h, (background << 4) + text);
+}
+
 class Dot
 {
 	int state = 2; // 0 - мина, 1 - флаг, 2 - закрытая клетка, 3 - открытая клетка, Дальше - цифры
@@ -21,13 +26,21 @@ class Dot
 	string states[4] = { "*", "$", "o", "." };
 	int w, h;
 	int color = 7;
-	bool calculated = false;
-	bool show = false;
+	bool calculated, show, flag;
 
 public:
-	Dot() { state = 2; _state = states[state]; }
+	Dot()
+	{ 
+		state = 2; 
+		_state = states[state];
+		calculated = show = flag = false;
+	}
 
-	Dot(int value) { if (value >= 0 && value <= 3) state = value; }
+	Dot(int value)
+	{
+		if (value >= 0 && value <= 3) state = value; 
+		calculated = show = flag = false;
+	}
 
 	void set_state(int value)
 	{
@@ -48,6 +61,7 @@ public:
 	string view_state() { return _state; }
 
 	void change_show() { show = !show; }
+	void change_flag() { flag = !flag; }
 
 	int get_color()
 	{
@@ -65,10 +79,17 @@ public:
 		if (c == 8) return 15;
 	}
 
+	bool true_flag()
+	{
+		if (state == 0 && flag) return true;
+		return false;
+	}
+
 	bool inRange(int value) { return value >= 0 && value <= 3; }
 
 	bool get_calc() { return calculated; }
 	bool get_show() { return show; }
+	bool get_flag() { return flag; }
 	void calculate() { calculated = true; }
 };
 
@@ -77,12 +98,11 @@ class Field
 	Dot* field[10][10];
 	bool mine[10][10];
 
-	int w, h;
+	int w, h, mines, core_mines, flags;
 
 	vector<int> made_empty;
 
-	bool last = false;
-	bool flag = false;
+	bool last, flag, stop;
 
 	string str_pos[10][10];
 	string str_pos_rus[10][10];
@@ -90,8 +110,9 @@ class Field
 	string word_rus[10] = {"ф", "и", "с", "в", "у", "а", "п", "р", "ш", "о"};
 
 public:
-	Field()
+	Field(int bombs)
 	{
+		last = flag = stop = false;
 		for (int i = 0; i < 10; i++)
 		{
 			for (int j = 0; j < 10; j++)
@@ -100,7 +121,7 @@ public:
 			}
 		}
 
-		generate_mines(10);
+		generate_mines(bombs);
 
 		for (int i = 1; i <= 10; i++)
 		{
@@ -112,8 +133,11 @@ public:
 		}
 	}
 
+	bool stop_game() { return stop; }
+
 	void show()
 	{
+		cout << "Осталось мин: " << mines - flags << endl << endl;
 		cout << "\ta b c d e f g h i j\n\n";
 
 		for (int i = 0; i < 10; i++)
@@ -121,12 +145,9 @@ public:
 			cout << i + 1 << "\t";
 			for (int j = 0; j < 10; j++)
 			{
-				if (field[j][i]->get_state() <= 3) cout << field[j][i]->view_state() << " ";
-
-				else
-				{
-					set_color(field[j][i]->get_color()); cout << to_string(field[j][i]->get_state() - 3); set_color(7); cout << " ";
-				}
+				if (field[j][i]->get_flag()) { set_color(112, 112); cout << "&"; set_color(7, 0); cout << " "; }
+				else if (field[j][i]->get_state() <= 3) { cout << field[j][i]->view_state() << " "; }
+				else if (field[j][i]->get_state() > 3) { set_color(field[j][i]->get_color()); cout << to_string(field[j][i]->get_state() - 3); set_color(7); cout << " "; }
 			}
 			cout << endl;
 		}
@@ -136,8 +157,10 @@ public:
 	{
 		int r1, r2;
 
-		if (quantity <= 90)
+		if (quantity <= 50)
 		{
+			mines = quantity;
+			core_mines = quantity;
 			srand(time(NULL));
 			for (int i = 0; i < quantity; i++)
 			{
@@ -152,33 +175,88 @@ public:
 		}
 	}
 
-	void accept_input(string user)
+	void check_win()
 	{
+		int opens = 0;
+		int true_flags = 0;
+
+		for (int i = 0; i < 10; i++)
+		{
+			for (int j = 0; j < 10; j++)
+			{
+				if (field[j][i]->get_state() >= 3) opens++;
+				if (field[j][i]->true_flag()) true_flags++;
+			}
+		}
+
+		if (opens + core_mines == 100)
+		{
+			cout << "Вы выиграли!\n\n";
+			stop = true;
+			return;
+		}
+
+		if (true_flags == core_mines)
+		{
+			cout << "Вы выиграли!\n\n";
+			stop = true;
+			return;
+		}
+	}
+
+	void accept_input(string user)
+	{	
 		if (get_index(user))
 		{
 			if (flag)
 			{
-
+				put_flag(w, h);
 			}
 			else
 			{
-				calculate_numbers(w, h);
-			}			
+				if (field[w][h]->get_state() == 2)
+				{
+					Beep(100, 200);
+					calculate_numbers(w, h);
+				}
+				else if (field[w][h]->get_state() == 0)
+				{
+					cout << "Вы проиграли!\n\n";
+					stop = true;
+					return;
+				}
+			}				
 		}
 		else
 		{
 			cout << "Неверная координата!\n\n";
 			return;
 		}
+
+		check_win();
 	}
 
 	void put_flag(int x, int y)
 	{
-		if(field[x][y]->get_state)
+		if (mines - 1 - flags < 0)
+		{
+			cout << "Упс! Похоже, под каким-то флагом нет мины '-'\n\n";
+			return;
+		}
+
+		if (field[x][y]->get_state() <= 2)
+		{
+			if (field[x][y]->get_flag()) { field[x][y]->change_flag(); flags--; cout << "Флаг убран!\n\n"; }
+			else { field[x][y]->change_flag(); flags++; cout << "Флаг поставлен!\n\n"; }
+		}
+
+		else if (field[x][y]->get_flag()) { field[x][y]->change_flag(); flags--; cout << "Флаг убран!\n\n"; }
 	}
 
 	bool check_mines(int x, int y)
 	{
+		if (field[x][y]->get_state() > 2 && field[x][y]->get_flag()) { field[x][y]->change_flag(); flags--; }
+
 		if (field[x][y]->get_state() <= 3)
 		{
 			if (y + 1 < 10)
@@ -208,6 +286,8 @@ public:
 	
 	bool chck_mns(int x, int y)
 	{
+		if (field[x][y]->get_state() > 2 && field[x][y]->get_flag()) { field[x][y]->change_flag(); flags--; }
+
 		int mine = 0;
 
 		if (field[x][y]->get_state() <= 3)
@@ -235,6 +315,8 @@ public:
 
 	void calc_nums(int x, int y)
 	{
+		if (field[x][y]->get_state() > 2 && field[x][y]->get_flag()) { field[x][y]->change_flag(); flags--; }
+
 		if (y < 0) return;
 		if (y > 9) return;
 
@@ -295,6 +377,9 @@ public:
 
 	void calculate_numbers(int x, int y) 
 	{
+		if (field[x][y]->get_flag()) return;
+
+		if (field[x][y]->get_state() > 2 && field[x][y]->get_flag()) { field[x][y]->change_flag(); flags--; }
 
 		if (y < 0) return;
 		if (y > 9) return;
@@ -310,6 +395,7 @@ public:
 		if (field[x][y]->get_state() == 0)
 		{
 			cout << "Вы проиграли!\n";
+			stop = true;
 			return;
 		}
 
@@ -471,10 +557,20 @@ int main()
 	system("chcp 1251");
 	system("cls");
 	string user;
+	int u = 0;
 
-	Field field;
+	while(true)
+	{
+		cout << "Введите количество мин (до 50) -> ";
+		while (!(cin >> u) || (cin.peek() != '\n')) { cin.clear(); while (cin.get() != '\n'); cout << "\nТолько цифрами!\n\n--> "; }
+		if (u < 1 || u > 50) cout << "От 1 до 50!\n\n";
+		else break;
+	} 	
+	system("cls");
 
-	cout << "Управление: Вы должны ввести координату, например A1 или J7, но не 1A или 7J\n\n";
+	Field field(u);
+
+	cout << "Управление: Вы должны ввести координату, например A1 или J7, но не 1A или 7J\nНемного о интерфейсе\no - Закрытая клетка\n. - Открытая клетка\n* - Мина\n& - Флаг\n\n";
 
 	while (true)
 	{
@@ -488,5 +584,7 @@ int main()
 
 		if (user == "f") field.change_mode();
 		else field.accept_input(user);		
+
+		if (field.stop_game()) break;
 	}
 }
