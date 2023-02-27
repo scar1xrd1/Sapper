@@ -435,9 +435,9 @@ public:
 
 		int state = field[x][y]->get_state();
 
-		cout << "this x y is " << x << " " << y << endl;
+		//cout << "this x y is " << x << " " << y << endl;
 
-		cout << "field[x][y]->get_state() = " << field[x][y]->get_state() << endl;
+		//cout << "field[x][y]->get_state() = " << field[x][y]->get_state() << endl;
 
 		if (state == 3 || state == 2)
 		{
