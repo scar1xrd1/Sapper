@@ -22,6 +22,7 @@ class Dot
 	int w, h;
 	int color = 7;
 	bool calculated = false;
+	bool show = false;
 
 public:
 	Dot() { state = 2; _state = states[state]; }
@@ -46,6 +47,8 @@ public:
 	int get_state() { return state; }
 	string view_state() { return _state; }
 
+	void change_show() { show = !show; }
+
 	int get_color()
 	{
 		if (state <= 3) return 7;
@@ -65,6 +68,7 @@ public:
 	bool inRange(int value) { return value >= 0 && value <= 3; }
 
 	bool get_calc() { return calculated; }
+	bool get_show() { return show; }
 	void calculate() { calculated = true; }
 };
 
@@ -76,6 +80,9 @@ class Field
 	int w, h;
 
 	vector<int> made_empty;
+
+	bool last = false;
+	bool flag = false;
 
 	string str_pos[10][10];
 	string str_pos_rus[10][10];
@@ -149,13 +156,25 @@ public:
 	{
 		if (get_index(user))
 		{
-			calculate_numbers(w, h);
+			if (flag)
+			{
+
+			}
+			else
+			{
+				calculate_numbers(w, h);
+			}			
 		}
 		else
 		{
 			cout << "Неверная координата!\n\n";
 			return;
 		}
+	}
+
+	void put_flag(int x, int y)
+	{
+		if(field[x][y]->get_state)
 	}
 
 	bool check_mines(int x, int y)
@@ -186,9 +205,97 @@ public:
 			return false;
 		}
 	}
+	
+	bool chck_mns(int x, int y)
+	{
+		int mine = 0;
+
+		if (field[x][y]->get_state() <= 3)
+		{
+			if (y + 1 < 10)
+			{
+				if (field[x][y + 1]->get_state() == 0) ++mine;
+				if (x + 1 < 10) { if (field[x + 1][y + 1]->get_state() == 0) ++mine; }
+				if (x - 1 > -1) { if (field[x - 1][y + 1]->get_state() == 0) ++mine; }
+			}
+			if (y - 1 > -1)
+			{
+				if (field[x][y - 1]->get_state() == 0) ++mine;
+				if (x + 1 < 10) { if (field[x + 1][y - 1]->get_state() == 0) ++mine; }
+				if (x - 1 > -1) { if (field[x - 1][y - 1]->get_state() == 0) ++mine; }
+			}
+
+			if (x + 1 < 10) { if (field[x + 1][y]->get_state() == 0) ++mine; }
+			if (x - 1 > -1) { if (field[x - 1][y]->get_state() == 0) ++mine; }
+		}		
+
+		if (mine > 0) return true;
+		else return false;
+	}
+
+	void calc_nums(int x, int y)
+	{
+		if (y < 0) return;
+		if (y > 9) return;
+
+		if (field[x][h]->get_calc())
+		{
+			return;
+		}
+
+		if (field[x][y]->get_state() == 0)
+		{
+			return;
+		}
+
+		if (field[x][y]->get_state() > 3) return;
+
+		if (!chck_mns(x, y)) last = false;
+		else return;
+
+		if (check_mines(x, y))
+		{
+			last = true;
+			return;
+		}
+
+		int state = field[x][y]->get_state();
+
+		cout << "this x y is " << x << " " << y << endl;
+
+		cout << "field[x][y]->get_state() = " << field[x][y]->get_state() << endl;
+
+		if (state == 3 || state == 2)
+		{
+			bool up, down, left, right;
+			up = down = left = right = true;
+
+			for (int i = 0; i < 10; i++)
+			{
+				if (up && y - i > -1 && field[x][y - i]->get_state() != 0)
+				{
+					if (check_mines(x, y - i)) up = false;
+				}
+				if (down && y + i < 10 && field[x][y + i]->get_state() != 0)
+				{
+					if (check_mines(x, y + i)) down = false;
+				}
+
+				if (left && x - i > -1 && field[x - i][y]->get_state() != 0)
+				{
+					if (check_mines(x - i, y)) left = false;
+				}
+				if (right && x + i < 10 && field[x + i][y]->get_state() != 0)
+				{
+					if (check_mines(x + i, y)) right = false;
+				}
+			}	
+		}
+	}
 
 	void calculate_numbers(int x, int y) 
 	{
+
 		if (y < 0) return;
 		if (y > 9) return;
 
@@ -239,9 +346,28 @@ public:
 				if (right && x + i < 10 && field[x + i][y]->get_state() != 0)
 				{
 					if (check_mines(x + i, y)) right = false;
-				}				
-			}
+				}		
 
+				if (y - i > -1)
+				{
+					calc_nums(x, y - i);
+				}
+
+				if (y + i < 10)
+				{
+					calc_nums(x, y + i);
+				}
+
+				if(x - i > -1)
+				{
+					calc_nums(x - i, y);
+				}
+
+				if (x + i < 10)
+				{
+					calc_nums(x + i, y);
+				}
+			}
 			////cout << "y + 1 = " << y + 1 << " y - 1 = " << y - 1;	
 			//if (y - 1 > -1) { check_mines(x, y - 1); /*calculate_numbers(x, y - 1);*/ }
 			//if (y + 1 < 10) { /*calculate_numbers(x, y + 1);*/ }					
@@ -328,6 +454,16 @@ public:
 		}
 		return false;
 	}
+
+	string get_mode()
+	{
+		if (flag) return "флаг";
+		else return "лопата";
+	}
+	void change_mode()
+	{
+		flag = !flag;
+	}
 };
 
 int main()
@@ -344,12 +480,13 @@ int main()
 	{
 		field.show();
 
-		cout << "\nВведите координату -> ";
+		cout << "\nВведите координату (режим: " << field.get_mode() << ", чтобы сменить режим введите F) -> ";
  		cin >> user;
 		system("cls");
 
 		transform(user.begin(), user.end(), user.begin(), tolower);
 
-		field.accept_input(user);
+		if (user == "f") field.change_mode();
+		else field.accept_input(user);		
 	}
 }
