@@ -3,11 +3,14 @@
 #include <vector>
 #include <algorithm>
 #include <Windows.h>
+#include <thread>
+#include <chrono>
 using namespace std;
 
 // Паттерны: посредник
 
 HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+float _time = 0;
 
 void set_color(int text)
 {
@@ -17,6 +20,15 @@ void set_color(int text)
 void set_color(int text, int background)
 {
 	SetConsoleTextAttribute(h, (background << 4) + text);
+}
+
+void timer()
+{
+	while (true)
+	{
+		this_thread::sleep_for(chrono::milliseconds(100));
+		_time+=0.1;
+	}	
 }
 
 class Dot
@@ -133,6 +145,19 @@ public:
 		}
 	}
 
+	~Field()
+	{
+		cout << "destructor field\n";
+
+		for (int i = 0; i < 10; i++)
+		{
+			for (int j = 0; j < 10; j++)
+			{
+				delete field[j][i];
+			}
+		}
+	}
+
 	bool stop_game() { return stop; }
 
 	void show()
@@ -145,7 +170,12 @@ public:
 			cout << i + 1 << "\t";
 			for (int j = 0; j < 10; j++)
 			{
-				if (field[j][i]->get_flag()) { set_color(112, 112); cout << "&"; set_color(7, 0); cout << " "; }
+				if (field[j][i]->get_state() == 0)
+				{
+					if (field[j][i]->get_flag()) { set_color(112, 112); cout << "&"; set_color(7, 0); cout << " "; }
+					else cout << "o ";
+				}
+				else if (field[j][i]->get_flag()) { set_color(112, 112); cout << "&"; set_color(7, 0); cout << " "; }
 				else if (field[j][i]->get_state() <= 3) { cout << field[j][i]->view_state() << " "; }
 				else if (field[j][i]->get_state() > 3) { set_color(field[j][i]->get_color()); cout << to_string(field[j][i]->get_state() - 3); set_color(7); cout << " "; }
 			}
@@ -343,9 +373,9 @@ public:
 
 		int state = field[x][y]->get_state();
 
-		cout << "this x y is " << x << " " << y << endl;
+		//cout << "this x y is " << x << " " << y << endl;
 
-		cout << "field[x][y]->get_state() = " << field[x][y]->get_state() << endl;
+		//cout << "field[x][y]->get_state() = " << field[x][y]->get_state() << endl;
 
 		if (state == 3 || state == 2)
 		{
@@ -552,39 +582,56 @@ public:
 	}
 };
 
+class Mediator
+{
+public:
+	Mediator() {}
+
+	void start()
+	{
+		string user;
+		int u = 0;
+
+		while (true)
+		{
+			cout << "Введите количество мин (до 50) -> ";
+			while (!(cin >> u) || (cin.peek() != '\n')) { cin.clear(); while (cin.get() != '\n'); cout << "\nТолько цифрами!\n\n--> "; }
+			if (u < 1 || u > 50) cout << "От 1 до 50!\n\n";
+			else break;
+		}
+		system("cls");
+
+		thread th(timer);
+		Field field(u);
+
+		cout << "Управление: Вы должны ввести координату, например A1 или J7, но не 1A или 7J\nНемного о интерфейсе\no - Закрытая клетка\n. - Открытая клетка\n* - Мина\n& - Флаг\n\n";
+
+		while (true)
+		{
+			field.show();
+
+			cout << "\nВведите координату (режим: " << field.get_mode() << ", чтобы сменить режим введите F) -> ";
+			cin >> user;
+			system("cls");
+
+			transform(user.begin(), user.end(), user.begin(), tolower);
+
+			if (user == "f") field.change_mode();
+			else field.accept_input(user);
+
+			if (field.stop_game()) break;
+		}
+
+		cout << "\n\nВремя игры: " << _time << " сек" << endl;
+		th.detach();
+	}
+};
+
 int main()
 {
 	system("chcp 1251");
 	system("cls");
-	string user;
-	int u = 0;
-
-	while(true)
-	{
-		cout << "Введите количество мин (до 50) -> ";
-		while (!(cin >> u) || (cin.peek() != '\n')) { cin.clear(); while (cin.get() != '\n'); cout << "\nТолько цифрами!\n\n--> "; }
-		if (u < 1 || u > 50) cout << "От 1 до 50!\n\n";
-		else break;
-	} 	
-	system("cls");
-
-	Field field(u);
-
-	cout << "Управление: Вы должны ввести координату, например A1 или J7, но не 1A или 7J\nНемного о интерфейсе\no - Закрытая клетка\n. - Открытая клетка\n* - Мина\n& - Флаг\n\n";
-
-	while (true)
-	{
-		field.show();
-
-		cout << "\nВведите координату (режим: " << field.get_mode() << ", чтобы сменить режим введите F) -> ";
- 		cin >> user;
-		system("cls");
-
-		transform(user.begin(), user.end(), user.begin(), tolower);
-
-		if (user == "f") field.change_mode();
-		else field.accept_input(user);		
-
-		if (field.stop_game()) break;
-	}
+	
+	Mediator mediator;
+	mediator.start();
 }
